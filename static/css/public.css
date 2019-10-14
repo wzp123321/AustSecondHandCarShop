@@ -1,0 +1,9 @@
+a {
+    text-decoration: none !important;
+    color: #666;
+  }
+  
+  .col-xl-1,.container,.offset-xl-2 {
+    padding-right: 0px !important;
+    padding-left: 0px !important;
+  }
