@@ -6,6 +6,7 @@ const users = {
     password: "",
   },
   mutations: {
+      
     // 存储username
     [SET_USER_NAME](state, data) {
       state.userName = data;
