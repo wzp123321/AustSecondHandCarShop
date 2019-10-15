@@ -1,55 +1,42 @@
-import * as types from "../mutations";
-
+/** @format */
+import * as types from '../mutations';
 const users = {
   state: {
     userName: "",
-    password: "",
+    password:""
   },
   mutations: {
-      
-    // 存储username
-    [SET_USER_NAME](state, data) {
+    //设置用户名
+    [types.SET_USER_NAME](state, data) {
       state.userName = data;
     },
     // 清空用户名
-    [CLEAR_USER_NAME](state, data) {
+    [types.CLEAR_USER_NAME](state, data) {
       state.userName = "";
     },
-    // 设置登录密码
-    [SET_PASS_WORD](state, data) {
-      state.password = data;
+    // 设置密码
+    [types.SET_PASS_WORD](state, data) {
+      state.userName = data;
     },
     // 清空密码
-    [CLEAR_PASS_WORD](state, data) {
-      state.password = "";
-    }
+    [types.CLEAR_PASS_WORD](state, data) {
+      state.userName = "";
+    },
   },
   actions: {
-    setUserName({
-      commit,
-      state
-    }, data) {
-      commit(SET_USER_NAME, data)
+    setUserName: ({ commit, state }, data) => {
+      commit(types.SET_USER_NAME, data);
     },
-    clearUserName({
-      commit,
-      state
-    }, data) {
-      commit(CLEAR_USER_NAME, data);
+    clearUserName: ({ commit, state }, data) => {
+      commit(types.CLEAR_USER_NAME, data);
     },
-    setPassword({
-      commit,
-      state
-    }, data) {
-      commit(SET_PASS_WORD, data);
+    setPassWord: ({ commit, state }, data) => {
+      commit(types.SET_PASS_WORD, data);
     },
-    clearPassword({
-      commit,
-      state
-    }, data) {
-      commit(CLEAR_PASS_WORD, data);
-    }
+    clearPassWord: ({ commit, state }, data) => {
+      commit(types.CLEAR_PASS_WORD, data);
+    },
   }
-}
+};
 
-export default users
+export default users;

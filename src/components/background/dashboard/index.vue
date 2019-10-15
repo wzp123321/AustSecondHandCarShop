@@ -4,7 +4,7 @@
       <b-col class="parentcol1 fadeInUp animated">
         <b-row>
           <span>
-            <i class="iconfont icon-caidan"/>快捷进入
+            <i class="iconfont icon-caidan" />快捷进入
           </span>
         </b-row>
         <b-row class="first-row">
@@ -14,7 +14,7 @@
             :key="index"
             :class="`liecol col${index+1}`"
           >
-            <i :class="`iconfont ${lie.icon}`"/>
+            <i :class="`iconfont ${lie.icon}`" />
             <span>
               <router-link :to="lie.path">{{lie.title}}</router-link>
             </span>
@@ -24,7 +24,7 @@
       <b-col class="parentcol2 fadeInUp animated">
         <b-row>
           <span>
-            <i class="iconfont icon-daiban"/> 待办事项
+            <i class="iconfont icon-daiban" /> 待办事项
           </span>
         </b-row>
         <b-row class="first-row">
@@ -44,13 +44,13 @@
       <b-col class="parentcol3 fadeInUp animated">
         <b-row>
           <span>
-            <i class="iconfont icon-banben"/> 系统版本
+            <i class="iconfont icon-banben" /> 系统版本
           </span>
         </b-row>
         <b-row class="row1">
           <b-col class="banbencol" xl="4" v-for="(b,index) in banben" :key="index">
             <div>
-              <i :class="`iconfont ${b.icon}`"/>
+              <i :class="`iconfont ${b.icon}`" />
             </div>
             <div>{{b.title}}</div>
           </b-col>
@@ -69,9 +69,12 @@
 import countTo from "vue-count-to";
 import bus from "../../../../static/js/bus.js";
 import http from "@/assets/api/index.js";
+
+import store from "@/store/index";
+import { mapActions } from "vuex";
 export default {
   components: { countTo },
-
+  store,
   data() {
     return {
       liebiaos: [
@@ -190,6 +193,8 @@ export default {
     };
   },
   methods: {
+    ...mapActions(["setUserName"]),
+    ...mapActions(["setPassWord"]),
     getuncheckcarcount() {
       http
         .getCarsByStatus({
@@ -203,7 +208,7 @@ export default {
     getstatusordercount(status) {
       http.getStatusPages({ status: status }).then(response => {
         const count = response.data.data;
-         this.daiban[status-1].count = count;
+        this.daiban[status - 1].count = count;
       });
     },
     drawLine: function() {
@@ -216,6 +221,7 @@ export default {
     }
   },
   mounted() {
+    this.setUserName(window.localStorage.getItem("username"));
     this.getuncheckcarcount();
     this.getstatusordercount(1);
     this.getstatusordercount(2);

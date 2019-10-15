@@ -27,7 +27,11 @@ import { Decrypt, Encrypt } from "../../../static/js/utils.js";
 import http from "@/assets/api/index.js";
 import qs from "qs";
 
+import store from "@/store/index";
+import {mapActions} from "vuex";
+
 export default {
+  store,
   data() {
     return {
       rememberPass: false,
@@ -36,7 +40,9 @@ export default {
       password: ""
     };
   },
+  
   methods: {
+    ...mapActions(['setUserName']),
     RememberPassword() {
       this.rememberPass = !this.rememberPass;
     },
