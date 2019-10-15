@@ -1,78 +1,130 @@
-<template>
-  <div class="user-wrapcontent">
-    <b-row class="headerrow">
-      <b-col xl="3">
-        <el-select v-model="status" @change="handleStatusChange">
-          <el-option v-for="item in statuses" :key="item.key" :label="item.value" :value="item.key"></el-option>
-        </el-select>
-      </b-col>
-      <b-col xl="1" offset-xl="8">
-        <a-button type="primary" @click="showAddModal">新增</a-button>
-        <a-modal
-          title="用户新增"
-          :visible="addvisible"
-          @ok="handleOk"
-          :confirmLoading="addconfirmLoading"
-          @cancel="handleCancel"
-          okText="确认"
-          cancelText="取消"
-        >
-          <div class="row">
-            <a-input type="text" class="modalinput" v-model="inputuserId"/>
-            <a-button type="primary" @click="selectUser">查询</a-button>
-          </div>
-          <p class="select-p">
-            {{user.userId}}
-            <span>{{user.userName}}</span>
-          </p>
-        </a-modal>
-      </b-col>
-    </b-row>
-    <el-table :data="admins" border>
-      <el-table-column prop="userId" label="用户标识"></el-table-column>
-      <el-table-column prop="userName" label="姓名"></el-table-column>
-      <el-table-column label="角色">
-        <template slot-scope="scope">{{scope.row.authority === 2 ? '超级管理员' : '普通管理员'}}</template>
-      </el-table-column>
-      <el-table-column label="状态">
-        <template slot-scope="scope">
-          <a
-            style="color:#06a5ff"
-            @click="changeAdminStatus(scope.row)"
-          >{{scope.row.status ===0 ? '启用' : '禁用'}}</a>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作">
-        <template slot-scope="scope">
-          <a v-if="loginname===scope.row.userName" @click="deleteAdmin(scope.row)" disabled>删除</a>
-          <a v-else @click="deleteAdmin(scope.row)" style="color:#06a5ff">删除</a>
-        </template>
-      </el-table-column>
-    </el-table>
-    <b-col class="text-right" style="margin-top:20px;">
-      <template>
-        <a-pagination v-model="current" :total="total" @change="handlePagination"/>
-      </template>
-    </b-col>
-  </div>
-</template>
 <script>
+import Vue from "vue";
 import { Decrypt, Encrypt } from "../../../../../static/js/utils.js";
 import http from "@/assets/api/index.js";
 import qs from "qs";
+import {
+  Table,
+  Button,
+  Input,
+  Select,
+  Modal,
+  Popconfirm,
+  Form
+} from "ant-design-vue";
+import store from "@/store/index";
+import { mapGetters } from "vuex";
 
 export default {
+  name: "UserList",
+  components: {
+    Table,
+    Button,
+    Select,
+    Option: Select.Option,
+    Modal,
+    Popconfirm,
+    Form,
+    Input
+  },
+  store,
   data() {
     return {
-      loginname: Decrypt(window.localStorage.getItem("loginname")),
-      admins: [],
-      inputuserId: "",
-      user: {},
-      current: 1,
-      status: 2,
-      total: 10,
+      tableColumn: [
+        {
+          title: "序号",
+          key: "index",
+          dataIndex: "index",
+          customRender: (text, record, index) => {
+            return (this.pagination.current - 1) * 10 + index + 1;
+          }
+        },
+        {
+          title: "用户名",
+          key: "userName",
+          dataIndex: "userName",
+          customRender: (text, record, index) => {
+            return <span>{text}</span>;
+          }
+        },
+        {
+          title: "角色",
+          key: "authority",
+          dataIndex: "authority;",
+          customRender: (text, record, index) => {
+            return (
+              <span>
+                {record.authority === 2 ? "超级管理员" : "普通管理员"}
+              </span>
+            );
+          }
+        },
+        {
+          title: "状态",
+          key: "status",
+          dataIndex: "status",
+          customRender: (text, record, index) => {
+            return (
+              <Popconfirm
+                title={record.status === 0 ? "你确认禁用？" : "你确认启用？"}
+                onConfirm={() => {
+                  this.confirmStatus(record.userId, record.status);
+                }}
+                onCancel={() => {
+                  this.cancelStatus;
+                }}
+                okText="确认"
+                cancelText="取消"
+              >
+                <span style={{ color: "#06a5ff" }}>
+                  {" "}
+                  {record.status === 0 ? "启用" : "禁用"}
+                </span>
+              </Popconfirm>
+            );
+          }
+        },
+
+        {
+          title: "操作",
+          key: "action",
+          dataIndex: "action",
+          customRender: (text, record, index) => {
+            return (
+              <Popconfirm
+                title="你确认删除吗？"
+                onConfirm={() => {
+                  this.confirmDelete(record.userId);
+                }}
+                onCancel={() => {
+                  this.cancelStatus;
+                }}
+                okText="确认"
+                cancelText="取消"
+              >
+                <a
+                  style={{
+                    color: this.userName !== record.userName ? "#06a5ff" : ""
+                  }}
+                  disabled={this.userName == record.userName}
+                >
+                  删除
+                </a>
+              </Popconfirm>
+            );
+          }
+        }
+      ],
+      loading: false,
+      dataSource: [], // 数据源
+      userInfo: {},
+      userId: "",
+      pagination: {
+        current: 1,
+        total: 10
+      },
+      searchParams: {},
       addvisible: false,
-      addconfirmLoading: false,
       statuses: [
         {
           key: 2,
@@ -89,180 +141,177 @@ export default {
       ]
     };
   },
+  computed: mapGetters(["userName"]),
   methods: {
-    getParams() {
-      return this.status === 2
-        ? { currentpage: this.current }
-        : { status: this.status, currentpage: this.current };
-    },
-    // 分页
-    handlePagination(value) {
-      this.current = value;
-      this.selectAllAdmin(this.getParams());
-    },
-    // 删除管理员
-    deleteAdmin(data) {
-      const _this = this;
-      this.$confirm({
-        title: "删除用户",
-        content: "确定删除" + data.userName + "?",
-        okText: "确认",
-        cancelText: "取消",
-        onOk() {
-          let params = {
-            userId: data.userId
-          };
-          http.getAdminDelete(params).then(response => {
-            if (response.data.code === 200) {
-              _this.$message.success("删除成功");
-              const params =
-                _this.status === 2
-                  ? {
-                      currentpage:
-                        _this.admins.length === 1
-                          ? _this.current - 1
-                          : _this.current
-                    }
-                  : {
-                      status: _this.status,
-                      currentpage:
-                        _this.admins.length === 1
-                          ? _this.current - 1
-                          : _this.current
-                    };
-              _this.selectAllAdmin(params);
-              if (_this.admins.length === 1) {
-                _this.current--;
-              }
-            } else {
-              this.$message.error("删除失败");
-            }
-          });
-        }
+    // 查询所有管理员
+    async selectAllAdmin() {
+      this.loading = true;
+      this.searchParams = Object.assign(this.searchParams, {
+        currentpage: this.pagination.current,
+        limit: 10
       });
+      const res = await http.getAdminList(this.searchParams);
+      if (res && res.data.code === 200) {
+        const dataSource = res.data.data.data;
+        const total = res.data.data.total;
+        this.dataSource = dataSource;
+        this.pagination.total = total;
+        this.loading = false;
+      } else {
+        this.$message.error("查询出错");
+      }
     },
-    // 下拉框改变
-    handleStatusChange(value) {
-      this.status = value;
-      this.selectAllAdmin(this.getParams());
+    // 删除
+    async confirmDelete(userId) {
+      const res = await http.getAdminDelete({ userId });
+      if (res && res.data.code === 200) {
+        this.$message.success("删除成功");
+        this.selectAllAdmin();
+      }
     },
     // 改变用户状态
-    changeAdminStatus(data) {
-      let params = {
-        userId: data.userId,
-        status: data.status
-      };
-      http.getAdminChangeStatus(params).then(response => {
-        if (response.data.code === 200) {
-          this.$message.success("修改成功");
-          //调用获取数据的方法
-          this.selectAllAdmin(this.getParams());
-        } else {
-          this.$message.error("修改失败");
-        }
+    async confirmStatus(userId, status) {
+      const res = await http.getAdminChangeStatus({
+        userId,
+        status
       });
+      if (res && res.data.code === 200) {
+        this.$message.success("修改成功");
+        //调用获取数据的方法
+        this.selectAllAdmin();
+      } else {
+        this.$message.error("修改失败");
+      }
     },
-    // 显示新增管理员对话框
+    cancelStatus() {},
+    // 下拉框筛选
+    handleStatusChange(status) {
+      if (status === 2) {
+        Vue.delete(this.searchParams, "status");
+      } else {
+        this.searchParams = Object.assign(this.searchParams, { status });
+      }
+      this.selectAllAdmin();
+    },
+    //   表格改变
+    onTableChange(pagination, filters, sorter, extra) {
+      this.pagination.current = pagination.current;
+      this.selectAllAdmin();
+    },
+    // 新增对话框
     showAddModal() {
       this.addvisible = true;
     },
-    selectUser() {
-      http
-        .getUserInfobyid({
-          userId: this.inputuserId
-        })
-        .then(response => {
-          if (response.data.code == 200) {
-            const user = response.data.data;
-            this.user = user;
-          }
-        });
-    },
-    // add对话框ok
-    handleOk(e) {
-      this.addconfirmLoading = true;
-      http
-        .getAdminAdd({
-          userId: this.user.userId
-        })
-        .then(response => {
-          if (response.data.code == 200) {
-            this.$message.success("新增成功");
-            this.inputuserId = "";
-            this.user = {};
-            this.selectAllAdmin(this.getParams());
-          } else {
-            this.$message.error("新增失败");
-          }
-        });
-      setTimeout(() => {
+    // 隐藏新增对话框
+    async handleModalOk() {
+      const res = await http.getAdminAdd({
+        userId: this.userId
+      });
+      if (res && res.data.code === 200) {
+        this.$message.success("新增成功");
+        this.userId = "";
         this.addvisible = false;
-        this.addconfirmLoading = false;
-      }, 1000);
+        this.userInfo = {};
+        this.selectAllAdmin();
+      }
     },
-    // 取消对话框
-    handleCancel(e) {
-      this.inputuserId = "";
-      this.user = {};
+    // 对话框确认
+    hideAddModal() {
+      this.userId = "";
       this.addvisible = false;
     },
-    // 查询所有管理员
-    selectAllAdmin(params) {
-      const loading = this.$loading({
-        lock: true,
-        text: "加载中...",
-        spinner: "el-icon-loading",
-        background: "rgba(0, 0, 0, 0.7)"
+    inputChange(e) {
+      this.userId = e.target.value;
+    },
+    async searchUser() {
+      // getAdminAdd
+      const res = await http.getUserInfobyid({
+        userId: this.userId
       });
-      http.getAdminList(params).then(response => {
-        if (response.data.code === 200) {
-          const admins = response.data.data.data;
-          const total = response.data.data.total;
-          this.admins = admins;
-          this.total = total;
-          setTimeout(() => {
-            loading.close();
-          }, 400);
-        } else {
-          this.$message.error("查询出错");
-        }
-      });
+      if (res && res.data.code === 200) {
+        const userInfo = res.data.data;
+        this.userInfo = userInfo;
+        this.handleModalOk();
+      }
     }
   },
-  async mounted() {
-    await this.selectAllAdmin(this.getParams());
+
+  created() {
+    this.selectAllAdmin();
+  },
+  render(h) {
+    const {
+      dataSource,
+      tableColumn,
+      statuses,
+      pagination,
+      onTableChange,
+      loading
+    } = this;
+    return (
+      <div style={{ width: "100%", positive: "relative" }}>
+        <div
+          style={{
+            padding: "0 10px 10px 10px",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between"
+          }}
+        >
+          <a-select
+            style={{ width: "120px" }}
+            placeholder="请选择"
+            onChange={this.handleStatusChange}
+          >
+            {statuses.map((item, index) => {
+              return (
+                <a-select-option key={index + item} value={item.key}>
+                  {item.value}
+                </a-select-option>
+              );
+            })}
+          </a-select>
+          <Button type="primary" style={{width:"80px"}} onClick={this.showAddModal}>
+            新增
+          </Button>
+        </div>
+        <Table
+        style={{marginLeft:"10px"}}
+          bordered
+          loading={loading}
+          onChange={onTableChange}
+          pagination={pagination}
+          columns={tableColumn}
+          dataSource={dataSource}
+        />
+        ,
+        <Modal
+          title="新增管理员"
+          visible={this.addvisible}
+          onOk={this.handleModalOk}
+          onCancel={this.hideAddModal}
+        >
+          <div style={{ width: "300px", margin: "0 auto" }}>
+            <Input
+              style={{ width: "200px", marginRight: "20px" }}
+              placeholder="请输入搜索条件"
+              onChange={this.inputChange}
+            />
+            <Button type="primary" onClick={this.searchUser}>
+              搜索
+            </Button>
+            {JSON.stringify(this.userInfo) !== "{}" ? (
+              <div style={{ marginTop: "10px" }}>
+                <span>{this.userInfo.userName}</span>---
+                <span>{this.userInfo.userId}</span>
+              </div>
+            ) : (
+              <div></div>
+            )}
+          </div>
+        </Modal>
+      </div>
+    );
   }
 };
 </script>
-<style lang="less" scoped>
-.user-wrapcontent {
-  padding-left: 10px;
-  .headerrow {
-    margin-bottom: 5px;
-    padding: 10px 5px;
-    border-radius: 5px;
-    background: #fff;
-    margin-left: 2px;
-    .ant-btn-primary {
-      width: 120px;
-      height: 36px;
-    }
-    .select-p {
-      margin-top: 20px;
-      font-size: 16px;
-      padding-left: 10px;
-      color: #06a5ff;
-      span {
-        display: inline-block;
-        margin-left: 100px;
-      }
-    }
-  }
-}
-.modalinput {
-  width: 300px;
-  margin-right: 100px;
-  margin-left: 20px;
-}
-</style>
-

@@ -72,6 +72,7 @@ import http from "@/assets/api/index.js";
 
 import store from "@/store/index";
 import { mapActions } from "vuex";
+import { Decrypt } from "../../../../static/js/utils";
 export default {
   components: { countTo },
   store,
@@ -221,7 +222,7 @@ export default {
     }
   },
   mounted() {
-    this.setUserName(window.localStorage.getItem("username"));
+    this.setUserName(Decrypt(window.localStorage.getItem("username")));
     this.getuncheckcarcount();
     this.getstatusordercount(1);
     this.getstatusordercount(2);
