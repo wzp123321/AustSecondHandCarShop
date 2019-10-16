@@ -71,11 +71,9 @@ import bus from "../../../../static/js/bus.js";
 import http from "@/assets/api/index.js";
 
 import store from "@/store/index";
-import { mapActions } from "vuex";
 import { Decrypt } from "../../../../static/js/utils";
 export default {
   components: { countTo },
-  store,
   data() {
     return {
       liebiaos: [
@@ -194,8 +192,6 @@ export default {
     };
   },
   methods: {
-    ...mapActions(["setUserName"]),
-    ...mapActions(["setPassWord"]),
     getuncheckcarcount() {
       http
         .getCarsByStatus({
@@ -207,7 +203,7 @@ export default {
         });
     },
     getstatusordercount(status) {
-      http.getStatusPages({ status: status }).then(response => {
+      http.getStatusPages({ status }).then(response => {
         const count = response.data.data;
         this.daiban[status - 1].count = count;
       });
@@ -222,7 +218,6 @@ export default {
     }
   },
   mounted() {
-    this.setUserName(Decrypt(window.localStorage.getItem("username")));
     this.getuncheckcarcount();
     this.getstatusordercount(1);
     this.getstatusordercount(2);

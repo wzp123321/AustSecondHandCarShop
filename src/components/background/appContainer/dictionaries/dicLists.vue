@@ -85,7 +85,6 @@
 </template>
 <script>
 import { Decrypt, Encrypt } from "../../../../../static/js/utils.js";
-import qs from "qs";
 import http from "@/assets/api/index.js";
 export default {
   data() {

@@ -33,12 +33,10 @@ export default {
   store,
   data() {
     return {
-      // userName: Decrypt(window.localStorage.getItem("loginname")),
       carcount: window.localStorage.getItem("carcount") || 0,
       ordercount: 0
     };
   },
-  computed: mapGetters(["userName"]),
   methods: {
     ...mapActions(["clearUserName", "clearPassWord"]),
     signout() {
@@ -75,24 +73,25 @@ export default {
       });
     }
   },
-  mounted() {
-    this.getuncheckcarcount();
-    this.getordercount();
-    // this.userName = Decrypt(this.userName);
-  },
+  mounted() {},
   created() {
-    bus.$on(
-      "toheader",
-      function(data) {
-        this.carcount = data;
-      }.bind(this)
-    );
-    bus.$on(
-      "toheaderorder",
-      function(data) {
-        this.ordercount = data;
-      }.bind(this)
-    );
+    this.userName = Decrypt(window.localStorage.getItem("username"));
+    this.$nextTick(() => {
+      this.getuncheckcarcount();
+      this.getordercount();
+      bus.$on(
+        "toheader",
+        function(data) {
+          this.carcount = data;
+        }.bind(this)
+      );
+      bus.$on(
+        "toheaderorder",
+        function(data) {
+          this.ordercount = data;
+        }.bind(this)
+      );
+    });
   }
 };
 </script>

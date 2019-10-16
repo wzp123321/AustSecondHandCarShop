@@ -5,7 +5,7 @@
     </a-layout-header>
     <a-layout class="maincontent">
       <a-layout-sider class="slide">
-        <asidebar style></asidebar>
+        <asidebar></asidebar>
       </a-layout-sider>
       <a-layout-content class="content">
         <Container></Container>

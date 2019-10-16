@@ -1,152 +1,127 @@
 <template>
-  <div>
-    <b-container>
-      <b-col class="signindiv" xl="6" offset-xl="3">
-        <div>
-          <span class="signindiv-header">管理后台登录界面</span>
-        </div>
-        <p>
-          <span class="login-span">用户名</span>
-          <el-input v-model="username" placeholder="请输入用户名" class="logininput"></el-input>
-        </p>
-        <p>
-          <span class="login-span">密码</span>
-          <el-input v-model="password" type="password" placeholder="请输入密码" class="logininput"></el-input>
-        </p>
-        <div class="loginmessage">{{loginmessage}}</div>
-        <div class="remember">
-          <a-radio value="rememberPass" :checked="rememberPass" @click="RememberPassword">记住密码</a-radio>
-        </div>
-        <a-button class="login-btn" type="primary" @click="UserLogin">登录</a-button>
-      </b-col>
-    </b-container>
-  </div>
+  <a-form :form="form" class="login-form" @submit="handleSubmit">
+    <a-form-item>
+      <span class="signin-header">管理后台登录界面</span>
+    </a-form-item>
+    <a-form-item>
+      <a-input
+        v-decorator="[
+          'userName',
+          { rules: [{ required: true, message: '请输入用户名!' }] },
+        ]"
+        placeholder="请输入用户名"
+      >
+        <a-icon slot="prefix" type="user" style="color: rgba(0,0,0,.25)" />
+      </a-input>
+    </a-form-item>
+    <a-form-item>
+      <a-input
+        v-decorator="[
+          'password',
+          { rules: [{ required: true, message: '请输入密码!' }] },
+        ]"
+        type="password"
+        placeholder="请输入密码"
+      >
+        <a-icon slot="prefix" type="lock" style="color: rgba(0,0,0,.25)" />
+      </a-input>
+    </a-form-item>
+    <a-form-item style="text-align:left">
+      <a-checkbox :checked="rememberpwd" @click="()=>{rememberpwd= !rememberpwd}">记住密码</a-checkbox>
+    </a-form-item>
+    <a-form-item>
+      <a-button type="primary" html-type="submit" class="login-form-button">登录</a-button>
+    </a-form-item>
+  </a-form>
 </template>
 <script>
 import { Decrypt, Encrypt } from "../../../static/js/utils.js";
 import http from "@/assets/api/index.js";
-import qs from "qs";
 
 import store from "@/store/index";
-import {mapActions} from "vuex";
+import { mapActions } from "vuex";
+
+import { Form, Input, Button, Icon } from "ant-design-vue";
 
 export default {
   store,
+  components: {
+    "a-form": Form,
+    "a-form-item": Form.Item,
+    "a-input": Input,
+    "a-button": Button,
+    "a-icon": Icon
+  },
+  beforeCreate() {
+    this.form = this.$form.createForm(this);
+  },
   data() {
     return {
-      rememberPass: false,
-      loginmessage: "",
-      username: "",
-      password: ""
+      rememberpwd: false
     };
   },
-  
+
   methods: {
-    ...mapActions(['setUserName']),
-    RememberPassword() {
-      this.rememberPass = !this.rememberPass;
-    },
-    // 校验用户输入
-    checkUserInput() {
-      this.loginmessage = "";
-      if (this.username === "") {
-        this.loginmessage = "用户名为空！";
-      }
-      if (this.password === "") {
-        this.loginmessage = "密码为空！";
-      }
+    ...mapActions(["setUserName","setPassWord"]),
+    // 登录表单提交
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFields((err, values) => {
+        if (!err) {
+          this.getUserLogin(values.userName, values.password);
+        }
+      });
     },
     // 用户登录
-    UserLogin() {
-      this.checkUserInput();
-      if (this.loginmessage === '') {
-        const loading = this.$loading({
-          lock: true,
-          text: "加载中...",
-          spinner: "el-icon-loading",
-          background: "rgba(0, 0, 0, 0.7)"
-        });
-        http
-          .getAdminLogin({
-            username: this.username,
-            password: this.password
-          })
-          .then(response => {
-            if (response.data.code === 200) {
-              setTimeout(() => {
-                loading.close();
-              }, 400);
-              this.$message.success("登陆成功！");
-              window.localStorage.setItem("loginname", Encrypt(this.username));
-              window.localStorage.setItem(
-                "token",
-                "Bearer" + response.data.data.token
-              );
-              window.sessionStorage.setItem("adminLogin", true);
-              if (this.rememberPass) {
-                window.localStorage.setItem("username", Encrypt(this.username));
-                window.localStorage.setItem("password", Encrypt(this.password));
-              }
-              location.href = "/";
-            } else if (response.data.code === 403) {
-              this.$message.error("权限不足!");
-            } else {
-              this.$message.error(response.data.message);
-            }
-          });
+    async getUserLogin(username, password) {
+      const res = await http.getAdminLogin({
+        username,
+        password
+      });
+      console.log("res", res);
+      if (res && res.data.code === 200) {
+        this.$message.success("登陆成功！");
+        window.localStorage.setItem("loginname", Encrypt(username));
+        window.localStorage.setItem("token", "Bearer" + res.data.data.token);
+        this.setUserName(Encrypt(username));
+        this.setPassWord(Encrypt(password));
+        window.sessionStorage.setItem("adminLogin", true);
+        if (this.rememberpwd) {
+          window.localStorage.setItem("username", Encrypt(username));
+          window.localStorage.setItem("password", Encrypt(password));
+        }
+        this.$router.push("/");
+      } else if (res.data.code === 403) {
+        this.$message.error("权限不足!");
+      } else {
+        this.$message.error(res.data.message);
       }
     }
   },
   mounted() {
-    if (localStorage.getItem("username")) {
-      this.username = Decrypt(window.localStorage.getItem("username"));
-      this.password = Decrypt(window.localStorage.getItem("password"));
-    }
+    const userName = Decrypt(window.localStorage.getItem("username") || "");
+    const password = Decrypt(window.localStorage.getItem("password") || "");
+    this.form.setFieldsValue({ userName: userName, password: password });
   }
 };
 </script>
 <style lang="less" scoped>
-.signindiv {
-  margin-top: 150px;
+.login-form {
+  width: 570px;
+  margin: 0 auto;
+  padding: 20px 100px 50px 100px;
   border: 1px solid #999;
   border-radius: 5px;
-  div {
-    .signindiv-header {
-      font-size: 27px;
-      text-align: center;
-      display: inline-block;
-      margin-left: 66px;
-      padding: 22px 90px;
-      border-bottom: 1px solid #aaa;
-    }
-  }
-  .loginmessage {
-    color: red;
-    padding: 0 70px;
-    text-align: left;
-    margin-bottom: 15px;
-  }
-  p {
-    .logininput {
-      width: 300px;
-    }
-  }
-}
-
-.login-span {
-  display: inline-block;
-  width: 100px;
   text-align: center;
-}
-.signindiv > p {
-  margin-top: 25px;
-  padding: 5px 33px;
-}
-.remember {
-  margin: 0 0 20px 72px;
-}
-.login-btn {
-  margin: 10px 60px 30px 70px;
-  width: 380px;
+  .signin-header {
+    font-size: 27px;
+    border-bottom: 1px solid #aaa;
+    display: inline-block;
+    width: 100%;
+    padding-bottom: 10px;
+  }
+  .login-form-button {
+    width: 100%;
+  }
 }
 </style>

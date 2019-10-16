@@ -2,7 +2,6 @@
 import Vue from "vue";
 import { Decrypt, Encrypt } from "../../../../../static/js/utils.js";
 import http from "@/assets/api/index.js";
-import qs from "qs";
 import {
   Table,
   Button,
@@ -157,6 +156,11 @@ export default {
         this.dataSource = dataSource;
         this.pagination.total = total;
         this.loading = false;
+        // 如果查询当前页没有数据 则查询前一页  若为第一页在不查
+        if (dataSource.length === 0 && total > 10) {
+          this.pagination.current--;
+          this.selectAllAdmin();
+        }
       } else {
         this.$message.error("查询出错");
       }
@@ -237,7 +241,9 @@ export default {
   },
 
   created() {
-    this.selectAllAdmin();
+    this.$nextTick(() => {
+      this.selectAllAdmin();
+    });
   },
   render(h) {
     const {
@@ -271,12 +277,16 @@ export default {
               );
             })}
           </a-select>
-          <Button type="primary" style={{width:"80px"}} onClick={this.showAddModal}>
+          <Button
+            type="primary"
+            style={{ width: "80px" }}
+            onClick={this.showAddModal}
+          >
             新增
           </Button>
         </div>
         <Table
-        style={{marginLeft:"10px"}}
+          style={{ marginLeft: "10px" }}
           bordered
           loading={loading}
           onChange={onTableChange}
