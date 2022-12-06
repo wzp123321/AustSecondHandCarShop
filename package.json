@@ -22,7 +22,7 @@
     "element-ui": "^2.4.11",
     "less": "^3.9.0",
     "less-loader": "^4.1.0",
-    "qs": "^6.6.0",
+    "qs": "^6.6.1",
     "url-search-params-polyfill": "^5.0.0",
     "vue": "^2.6.6",
     "vue-axios": "^2.1.4",
